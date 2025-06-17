@@ -1,18 +1,34 @@
 import { useState, type FormEvent } from "react";
 import { TextInput } from "../components/text-input";
-import type { CreateTodo } from "../interfaces/todo";
+import type { CreateTodo, Todo } from "../interfaces/todo";
+import Switcher from "./switcher";
 
-interface NewTodoProps {
-  onSubmit(data: CreateTodo): void;
-}
+type TodoFormProps =
+  | {
+      type: "create";
+      onSubmit(data: CreateTodo): void;
+    }
+  | {
+      type: "edit";
+      onSubmit(data: Todo): void;
+      todo: Todo;
+    };
 
-export default function NewTodo({ onSubmit }: NewTodoProps) {
-  const [state, setState] = useState<CreateTodo>({
-    title: "",
-    detail: "",
+export default function NewTodo(props: TodoFormProps) {
+  const [state, setState] = useState<Todo>(() => {
+    if (props.type === "create") {
+      return {
+        id: "NEW TODO",
+        title: "",
+        detail: "",
+        isCompleted: false,
+      };
+    }
+
+    return props.todo;
   });
 
-  const handleChange = (key: keyof CreateTodo, value: string) => {
+  const handleChange = (key: keyof Todo, value: Todo[keyof Todo]) => {
     return setState((state) => ({
       ...state,
       [key]: value,
@@ -25,7 +41,7 @@ export default function NewTodo({ onSubmit }: NewTodoProps) {
 
     if (!isValid()) return;
 
-    onSubmit(state);
+    props.onSubmit(state);
   };
 
   const isValid = () => {
@@ -34,7 +50,9 @@ export default function NewTodo({ onSubmit }: NewTodoProps) {
 
   return (
     <div className="flex justify-center items-center p-4 gap-4 flex-col">
-      <h1 className="text-3xl">New Todo</h1>
+      <h1 className="text-3xl">
+        {props.type === "create" ? "New" : "Edit"} Todo
+      </h1>
       <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
         <TextInput
           name="title"
@@ -48,6 +66,17 @@ export default function NewTodo({ onSubmit }: NewTodoProps) {
           value={state.detail ?? ""}
           onChange={(value) => handleChange("detail", value)}
         />
+        {props.type === "edit" && (
+          <div className="flex items-center gap-4">
+            <label htmlFor="isCompleted">Completed:</label>
+            <Switcher
+              checked={state.isCompleted}
+              onChange={() => handleChange("isCompleted", !state.isCompleted)}
+              name="isCompleted"
+              id="isCompleted"
+            />
+          </div>
+        )}
         <div className="flex justify-end gap-4">
           <button
             type="button"
@@ -65,7 +94,7 @@ export default function NewTodo({ onSubmit }: NewTodoProps) {
             }`}
             disabled={!isValid()}
           >
-            Add Todo
+            {props.type === "create" ? "Add" : "Edit"} Todo
           </button>
         </div>
       </form>

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import NewTodoForm from "../components/new-todo-form";
+import TodoForm from "../components/todo-form";
 import type { CreateTodo } from "../interfaces/todo";
 import { useTodoContext } from "../hooks/todo";
 
@@ -13,5 +13,5 @@ export default function NewTodoPage() {
     navigate("/");
   };
 
-  return <NewTodoForm onSubmit={onSubmit} />;
+  return <TodoForm type="create" onSubmit={onSubmit} />;
 }

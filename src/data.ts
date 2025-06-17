@@ -31,6 +31,11 @@ export const getTodos = async () => {
   return TODOS;
 };
 
+export const getTodo = async ({ id }: { id: string }) => {
+  const todo = TODOS.find((todo) => todo.id === id);
+  return todo ?? null;
+};
+
 export const updateTodo = async (data: Partial<Todo> & { id: string }) => {
   const { id, ...updates } = data;
 

@@ -1,14 +1,18 @@
-import { createContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { CreateTodo, Todo } from "../interfaces/todo";
 
 import * as api from "../data";
 
-type FetchState =
+type FetchState<T> =
   | {
       type: "succees";
-      data: {
-        todos: Todo[];
-      };
+      data: T;
     }
   | {
       type: "failure";
@@ -21,11 +25,14 @@ type FetchState =
     };
 
 interface TodoContextValue {
-  todoState: FetchState;
+  todoState: FetchState<Todo[]>;
+  fetchTodoState: FetchState<Todo>;
   todoActions: {
     toggleTodo: (todo: Todo) => Promise<void>;
     deleteTodo: (todo: Todo) => Promise<void>;
     createTodo: (todo: CreateTodo) => Promise<void>;
+    fetchTodo: ({ id }: { id: string }) => Promise<void>;
+    updateTodo: (todo: Todo) => Promise<void>;
   };
 }
 
@@ -35,10 +42,15 @@ const TodoContext = createContext<TodoContextValue>({
   todoState: {
     type: "loading",
   },
+  fetchTodoState: {
+    type: "loading",
+  },
   todoActions: {
     toggleTodo: noop,
     deleteTodo: noop,
     createTodo: noop,
+    fetchTodo: noop,
+    updateTodo: noop,
   },
 });
 
@@ -47,16 +59,20 @@ interface TodoContextProviderProps {
 }
 
 export const TodoContextProvider = ({ children }: TodoContextProviderProps) => {
-  const [todoState, setTodoState] = useState<FetchState>({
+  const [todoState, setTodoState] = useState<FetchState<Todo[]>>({
     type: "loading",
   });
 
-  const fetchTodos = async () => {
+  const [fetchTodoState, setFetchTodoState] = useState<FetchState<Todo>>({
+    type: "loading",
+  });
+
+  const fetchTodos = useCallback(async () => {
     try {
       const todos = await api.getTodos();
       return setTodoState({
         type: "succees",
-        data: { todos },
+        data: todos,
       });
     } catch (e) {
       console.log(e);
@@ -65,13 +81,13 @@ export const TodoContextProvider = ({ children }: TodoContextProviderProps) => {
         error: { message: "Something went wrong!" },
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTodos();
-  }, []);
+  }, [fetchTodos]);
 
-  const toggleTodo = async (todo: Todo) => {
+  const toggleTodo = useCallback(async (todo: Todo) => {
     const isCompleted = !todo.isCompleted;
 
     await api.updateTodo({
@@ -82,29 +98,62 @@ export const TodoContextProvider = ({ children }: TodoContextProviderProps) => {
     const todos = await api.getTodos();
     setTodoState({
       type: "succees",
-      data: { todos },
+      data: todos,
     });
-  };
+  }, []);
 
-  const deleteTodo = async (todo: Todo) => {
-    await api.deleteTodo(todo);
-    await fetchTodos();
-  };
+  const deleteTodo = useCallback(
+    async (todo: Todo) => {
+      await api.deleteTodo(todo);
+      await fetchTodos();
+    },
+    [fetchTodos]
+  );
 
-  const createTodo = async (todo: CreateTodo) => {
-    await api.createTodo(todo);
-    await fetchTodos();
-  };
+  const createTodo = useCallback(
+    async (todo: CreateTodo) => {
+      await api.createTodo(todo);
+      await fetchTodos();
+    },
+    [fetchTodos]
+  );
+
+  const fetchTodo = useCallback(async ({ id }: { id: string }) => {
+    setFetchTodoState({ type: "loading" });
+    const todo = await api.getTodo({ id });
+    if (todo)
+      return setFetchTodoState({
+        type: "succees",
+        data: todo,
+      });
+
+    return setFetchTodoState({
+      type: "failure",
+      error: { message: "Something went wrong!" },
+    });
+  }, []);
+
+  const updateTodo = useCallback(async (todo: Todo) => {
+    await api.updateTodo(todo);
+  }, []);
+
+  const todoActions = useMemo(
+    () => ({
+      toggleTodo,
+      deleteTodo,
+      createTodo,
+      fetchTodo,
+      updateTodo,
+    }),
+    [createTodo, deleteTodo, fetchTodo, toggleTodo, updateTodo]
+  );
 
   return (
     <TodoContext.Provider
       value={{
         todoState,
-        todoActions: {
-          toggleTodo,
-          deleteTodo,
-          createTodo,
-        },
+        fetchTodoState,
+        todoActions,
       }}
     >
       {children}
