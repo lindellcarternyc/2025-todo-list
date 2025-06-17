@@ -4,3 +4,5 @@ export interface Todo {
   title: string;
   detail?: string;
 }
+
+export type CreateTodo = Pick<Todo, "title" | "detail">;
