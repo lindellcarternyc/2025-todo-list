@@ -7,7 +7,7 @@ import {
 } from "react";
 import type { CreateTodo, Todo } from "../interfaces/todo";
 
-import * as api from "../data";
+import * as db from "../db.ts";
 
 type FetchState<T> =
   | {
@@ -25,7 +25,7 @@ type FetchState<T> =
     };
 
 interface TodoContextValue {
-  todoState: FetchState<Todo[]>;
+  todoState: FetchState<Record<string, Todo>>;
   fetchTodoState: FetchState<Todo>;
   todoActions: {
     toggleTodo: (todo: Todo) => Promise<void>;
@@ -59,7 +59,7 @@ interface TodoContextProviderProps {
 }
 
 export const TodoContextProvider = ({ children }: TodoContextProviderProps) => {
-  const [todoState, setTodoState] = useState<FetchState<Todo[]>>({
+  const [todoState, setTodoState] = useState<FetchState<Record<string, Todo>>>({
     type: "loading",
   });
 
@@ -67,60 +67,39 @@ export const TodoContextProvider = ({ children }: TodoContextProviderProps) => {
     type: "loading",
   });
 
-  const fetchTodos = useCallback(async () => {
-    try {
-      const todos = await api.getTodos();
-      return setTodoState({
+  useEffect(() => {
+    db.getTodos((todos) => {
+      setTodoState({
         type: "succees",
         data: todos,
       });
-    } catch (e) {
-      console.log(e);
-      setTodoState({
-        type: "failure",
-        error: { message: "Something went wrong!" },
-      });
-    }
+    });
   }, []);
-
-  useEffect(() => {
-    fetchTodos();
-  }, [fetchTodos]);
 
   const toggleTodo = useCallback(async (todo: Todo) => {
     const isCompleted = !todo.isCompleted;
 
-    await api.updateTodo({
+    await db.updateTodo({
       ...todo,
       isCompleted,
     });
-
-    const todos = await api.getTodos();
-    setTodoState({
-      type: "succees",
-      data: todos,
-    });
   }, []);
 
-  const deleteTodo = useCallback(
-    async (todo: Todo) => {
-      await api.deleteTodo(todo);
-      await fetchTodos();
-    },
-    [fetchTodos]
-  );
+  const deleteTodo = useCallback(async (todo: Todo) => {
+    await db.deleteTodo(todo);
+  }, []);
 
-  const createTodo = useCallback(
-    async (todo: CreateTodo) => {
-      await api.createTodo(todo);
-      await fetchTodos();
-    },
-    [fetchTodos]
-  );
+  const createTodo = useCallback(async (todo: CreateTodo) => {
+    await db.createTodo(todo);
+  }, []);
 
   const fetchTodo = useCallback(async ({ id }: { id: string }) => {
     setFetchTodoState({ type: "loading" });
-    const todo = await api.getTodo({ id });
+    // const todo = await api.getTodo({ id });
+
+    setFetchTodoState({ type: "loading" });
+
+    const todo = await db.getTodo(id);
     if (todo)
       return setFetchTodoState({
         type: "succees",
@@ -134,7 +113,7 @@ export const TodoContextProvider = ({ children }: TodoContextProviderProps) => {
   }, []);
 
   const updateTodo = useCallback(async (todo: Todo) => {
-    await api.updateTodo(todo);
+    await db.updateTodo(todo);
   }, []);
 
   const todoActions = useMemo(

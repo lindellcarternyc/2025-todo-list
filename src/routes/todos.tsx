@@ -17,7 +17,9 @@ export default function TodosPage() {
 
   const completed =
     todoState.type === "succees"
-      ? todoState.data.filter((todo) => todo.isCompleted).length
+      ? Object.keys(todoState.data).filter(
+          (id) => todoState.data[id].isCompleted
+        ).length
       : "-";
 
   return (
@@ -36,7 +38,8 @@ export default function TodosPage() {
         {todoState.type === "failure" && <p>{todoState.error.message}</p>}
         {todoState.type === "succees" && (
           <ul>
-            {todoState.data.map((todo) => {
+            {Object.keys(todoState.data).map((id) => {
+              const todo = todoState.data[id];
               return (
                 <li key={todo.id}>
                   <TodoItem
