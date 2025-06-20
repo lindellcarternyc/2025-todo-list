@@ -33,8 +33,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const todosRef = ref(db, "todos/");
-
 export const getTodos = async (cb: (data: Record<string, Todo>) => void) => {
   return onValue(ref(db, "todos"), (snapshot) => {
     const data = snapshot.val();
